@@ -35,7 +35,7 @@ typedef enum {
   SP_NAMELESS_ROOT_NODES =  0x4   // Allow root nodes to be nameless (callback will be given NULL strings for a root node's name).
 } sparse_options_t;
 
-typedef int (*sparse_fn_t)(sparse_msg_t msg, const char *begin, const char *end);
+typedef void (*sparse_fn_t)(sparse_msg_t msg, const char *begin, const char *end);
 
 typedef struct s_sparse_state {
   sparse_fn_t callback;
