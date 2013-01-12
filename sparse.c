@@ -313,7 +313,6 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
   return error;
 }
 
-#undef SP_DEFAULT_BUFFER_CAPACITY
 #undef SP_CHECK_FLAG
 #undef SP_ENSURE_BUFFER_SIZED
 #undef SP_RETURN_ERROR
