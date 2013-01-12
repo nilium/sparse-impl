@@ -54,15 +54,11 @@ upside to this is that you can parse multiple Sparse documents in different
 threads simply by creating new states.
 
 In addition, you can re-use states. Unlike XML or JSON, you can have multiple
-root nodes[^1] in Sparse, so concatenating documents is fine provided you parse
+root nodes in Sparse, so concatenating documents is fine provided you parse
 the documents completely and in order, otherwise things may get weird. You will
 probably want a newline separating each document, however, just on the off
 chance that you ended the previous document with a comment (which will eat the
 first line of any following documents if it didn't end in a newline).
-
-
-[^1]: This could be construed as a benefit, but it actually makes parsing
-documents more complicated, so it's rarely useful.
 
 
 
