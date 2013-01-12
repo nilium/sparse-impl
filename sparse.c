@@ -96,6 +96,7 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
 
   int current_char = 0;
   int last_char = state->last_char;
+  int in_escape = state->in_escape;
 
   sparse_mode_t mode = state->mode;
   sparse_mode_t last_mode = state->last_mode;
@@ -117,6 +118,18 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
         mode = last_mode;
 
       continue;
+    } else if (in_escape) {
+      switch (current_char) {
+      case 'n': current_char = '\n'; break;
+      case 'r': current_char = '\r'; break;
+      case 'a': current_char = '\a'; break;
+      case 'b': current_char = '\b'; break;
+      case 'f': current_char = '\f'; break;
+      case 't': current_char = '\t'; break;
+      default: break;
+      }
+      in_escape = 0;
+      goto sparse_buffer_char; // skip space trimming (space was escaped)
     }
 
     switch (current_char) {
@@ -253,23 +266,8 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
       break;
 
     case '\\':  // escape
-      // advance src_iter and get escaped character
-      if (src_iter != src_end)
-        current_char = *(++src_iter);
-      else
-        SP_RETURN_ERROR(SP_ERROR_INVALID_CHAR, src_iter, src_iter + 1, cb);
-
-      switch (current_char) {
-      case 'n': current_char = '\n'; break;
-      case 'r': current_char = '\r'; break;
-      case 'a': current_char = '\a'; break;
-      case 'b': current_char = '\b'; break;
-      case 'f': current_char = '\f'; break;
-      case 't': current_char = '\t'; break;
-      default: break;
-      }
-
-      goto sparse_buffer_char; // skip space trimming (space was escaped)
+      in_escape = 1;
+      break;
 
     default:
       sparse_buffer_char_trim_spaces:
@@ -309,6 +307,7 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
   state->depth = depth;
   state->mode = mode;
   state->last_mode = last_mode;
+  state->in_escape = in_escape;
   state->last_char = last_char;
 
   return error;

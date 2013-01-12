@@ -51,6 +51,7 @@ typedef struct s_sparse_state {
   sparse_mode_t mode;
   sparse_mode_t last_mode;
 
+  int in_escape;
   int last_char;
 } sparse_state_t;
 
