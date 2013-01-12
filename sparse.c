@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+static const char *sp_empty_str = "";
 static const char *sp_errstr_no_mem = "Could not allocate memory for sparse buffer.";
 static const char *sp_errstr_incomplete_doc = "Document is incomplete.";
 
@@ -57,7 +58,7 @@ sparse_error_t sparse_end(sparse_state_t *state)
   if (state->mode == SP_READ_NAME) {
     if (state->callback) {
       state->callback(SP_NAME, state->buffer, state->buffer + state->buffer_size - state->num_spaces_trailing);
-      state->callback(SP_VALUE, NULL, NULL);
+      state->callback(SP_VALUE, sp_empty_str, sp_empty_str);
     }
   } else if (state->mode == SP_READ_VALUE) {
     state->callback(SP_VALUE, state->buffer, state->buffer + state->buffer_size - state->num_spaces_trailing);
@@ -151,13 +152,13 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
         if (cb != NULL) {
           cb(SP_NAME, buffer, buffer + buffer_size - num_spaces_trailing);
           buffer_size = 0;
-          cb(SP_VALUE, NULL, NULL);
+          cb(SP_VALUE, sp_empty_str, sp_empty_str);
         }
       } else if (mode == SP_FIND_VALUE) {
         mode = SP_FIND_NAME;
 
         if (cb != NULL)
-          cb(SP_VALUE, NULL, NULL);
+          cb(SP_VALUE, sp_empty_str, sp_empty_str);
       }
 
       last_mode = mode;
@@ -171,7 +172,7 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
         if (cb != NULL) {
           cb(SP_NAME, buffer, buffer + buffer_size - num_spaces_trailing);
           buffer_size = 0;
-          cb(SP_VALUE, NULL, NULL);
+          cb(SP_VALUE, sp_empty_str, sp_empty_str);
         }
       } else if (mode == SP_READ_VALUE) {
         mode = SP_FIND_NAME;
@@ -195,7 +196,7 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
       } else if (mode == SP_FIND_NAME && depth == 0 && nameless_roots) {
         if (cb != NULL) {
           ++depth;
-          cb(SP_NAME, NULL, NULL);
+          cb(SP_NAME, sp_empty_str, sp_empty_str);
           cb(SP_BEGIN_NODE, src_iter, src_iter + 1);
         }
 
@@ -235,13 +236,13 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
 
       case SP_FIND_VALUE:
         if (cb != NULL)
-          cb(SP_VALUE, NULL, NULL);
+          cb(SP_VALUE, sp_empty_str, sp_empty_str);
         goto sparse_semicolon_reset;
 
       case SP_READ_NAME:
         if (cb != NULL) {
           cb(SP_NAME, buffer, buffer + buffer_size - num_spaces_trailing);
-          cb(SP_VALUE, NULL, NULL);
+          cb(SP_VALUE, sp_empty_str, sp_empty_str);
           sparse_semicolon_reset:
           buffer_size = 0;
         }
