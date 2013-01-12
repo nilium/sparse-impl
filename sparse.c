@@ -104,9 +104,6 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
 
   size_t depth = state->depth;
 
-  if (buffer == NULL)
-    return SP_ERROR_NO_MEM;
-
   /* If no end provided, try to guess where the end is */
   if (src_end == NULL)
     src_end = src_begin + strlen(src_begin);
