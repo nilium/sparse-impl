@@ -38,7 +38,7 @@ typedef enum {
 #ifdef __BLOCKS__
 typedef void (^sparse_block_t)(sparse_msg_t msg, const char *begin, const char *end);
 #endif
-typedef void (*sparse_fn_t)(sparse_msg_t msg, const char *begin, const char *end);
+typedef void (*sparse_fn_t)(sparse_msg_t msg, const char *begin, const char *end, void *context);
 
 typedef struct s_sparse_state {
   char *buffer;
@@ -55,13 +55,15 @@ typedef struct s_sparse_state {
   int in_escape;
   int last_char;
 
+  void *context;
+
   sparse_fn_t callback;
 #ifdef __BLOCKS__
   sparse_block_t block;
 #endif
 } sparse_state_t;
 
-sparse_error_t sparse_begin(sparse_state_t *state, size_t initial_buffer_capacity, sparse_options_t options, sparse_fn_t callback);
+sparse_error_t sparse_begin(sparse_state_t *state, size_t initial_buffer_capacity, sparse_options_t options, sparse_fn_t callback, void *context);
 #ifdef __BLOCKS__
 sparse_error_t sparse_begin_using_block(sparse_state_t *state, size_t initial_buffer_capacity, sparse_options_t options, sparse_block_t block);
 #endif

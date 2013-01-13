@@ -11,18 +11,18 @@ static const char *sp_errstr_incomplete_doc = "Document is incomplete.";
 
 #ifdef __BLOCKS__
 #define SP_HAS_CALLBACK() (callback != NULL || block != NULL)
-#define SP_SEND_MSG(MSG, BEGIN, END) {           \
+#define SP_SEND_MSG(MSG, BEGIN, END) {                  \
     if (block != NULL) {                                \
       block((MSG), (BEGIN), (END));                     \
     } else if (callback != NULL) {                      \
-      callback((MSG), (BEGIN), (END));                  \
+      callback((MSG), (BEGIN), (END), context);         \
     }                                                   \
   }
 #else
 #define SP_HAS_CALLBACK() (callback != NULL)
 #define SP_SEND_MSG(MSG, BEGIN, END)  {                 \
     if (callback != NULL) {                             \
-      callback((MSG), (BEGIN), (END));                  \
+      callback((MSG), (BEGIN), (END), context);         \
     }                                                   \
   }
 #endif
@@ -47,7 +47,7 @@ static const char *sp_errstr_incomplete_doc = "Document is incomplete.";
   }
 #define SP_ERRSTR_END(NAME) (NAME) + strlen((NAME))
 
-sparse_error_t sparse_begin(sparse_state_t *state, size_t initial_buffer_capacity, sparse_options_t options, sparse_fn_t callback)
+sparse_error_t sparse_begin(sparse_state_t *state, size_t initial_buffer_capacity, sparse_options_t options, sparse_fn_t callback, void *context)
 {
   char *buffer = NULL;
 
@@ -57,6 +57,7 @@ sparse_error_t sparse_begin(sparse_state_t *state, size_t initial_buffer_capacit
   state->mode = SP_FIND_NAME;
   state->last_mode = SP_FIND_NAME;
   state->callback = callback;
+  state->context = context;
 
   if (initial_buffer_capacity == 0)
     initial_buffer_capacity = SP_DEFAULT_BUFFER_CAPACITY;
@@ -75,7 +76,14 @@ sparse_error_t sparse_begin(sparse_state_t *state, size_t initial_buffer_capacit
 #ifdef __BLOCKS__
 sparse_error_t sparse_begin_using_block(sparse_state_t *state, size_t initial_buffer_capacity, sparse_options_t options, sparse_block_t block)
 {
-  const sparse_error_t error = sparse_begin(state, initial_buffer_capacity, options, NULL);
+  const sparse_error_t error = sparse_begin(state, initial_buffer_capacity, options, NULL, NULL);
+  /*
+    Could go back and reimplement block support by providing a callback that
+    recognizes its context pointer as a block, but then I'm not sure I can
+    guarantee a block will fit in the space of a pointer at all times. Kind of
+    like passing function pointers as void* - it's probably not really a good
+    idea.
+  */
   if (error == SP_NO_ERROR)
     state->block = Block_copy(block);
   return error;
@@ -86,19 +94,24 @@ sparse_error_t sparse_end(sparse_state_t *state)
 {
   sparse_error_t error = SP_NO_ERROR;
 
+  sparse_fn_t callback = state->callback;
+  void *context = state->context;
+#ifdef __BLOCKS__
+  sparse_block_t block = state->block;
+#endif
+
   if (state->mode == SP_READ_NAME) {
-    if (state->callback) {
-      state->callback(SP_NAME, state->buffer, state->buffer + state->buffer_size - state->num_spaces_trailing);
-      state->callback(SP_VALUE, sp_empty_str, sp_empty_str);
+    if (SP_HAS_CALLBACK()) {
+      SP_SEND_MSG(SP_NAME, state->buffer, state->buffer + state->buffer_size - state->num_spaces_trailing);
+      SP_SEND_MSG(SP_VALUE, sp_empty_str, sp_empty_str);
     }
   } else if (state->mode == SP_READ_VALUE) {
-    state->callback(SP_VALUE, state->buffer, state->buffer + state->buffer_size - state->num_spaces_trailing);
+    SP_SEND_MSG(SP_VALUE, state->buffer, state->buffer + state->buffer_size - state->num_spaces_trailing);
   }
 
   if (state->depth != 0) {
     error = SP_ERROR_INCOMPLETE_DOCUMENT;
-    if (state->callback)
-      state->callback(SP_ERROR, sp_errstr_incomplete_doc, SP_ERRSTR_END(sp_errstr_incomplete_doc));
+    SP_SEND_MSG(SP_ERROR, sp_errstr_incomplete_doc, SP_ERRSTR_END(sp_errstr_incomplete_doc));
   }
 
 #ifdef __BLOCKS__
@@ -138,6 +151,7 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
   sparse_mode_t last_mode = state->last_mode;
 
   sparse_fn_t callback = state->callback;
+  void *context = state->context;
 #if __BLOCKS__
   sparse_block_t block = state->block;
 #endif

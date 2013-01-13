@@ -4,7 +4,7 @@
 #include "sparse.h"
 
 static void check_sparse_result(sparse_error_t error);
-static void sparse_handle(sparse_msg_t msg, const char *begin, const char *end);
+static void sparse_handle(sparse_msg_t msg, const char *begin, const char *end, void *context);
 
 static void check_sparse_result(sparse_error_t error)
 {
@@ -28,8 +28,10 @@ static void check_sparse_result(sparse_error_t error)
     exit(1);
 }
 
-static void sparse_handle(sparse_msg_t msg, const char *begin, const char *end)
+static void sparse_handle(sparse_msg_t msg, const char *begin, const char *end, void *context)
 {
+  (void)context;
+
   char *tstring;
   size_t string_len = (begin == NULL ? 0 : (size_t)(end - begin));
 
@@ -73,13 +75,13 @@ int main(int argc, char const *argv[])
     "fov 100\n"
     "\n"
     "# Semicolons can terminate a value and tell the parser to go onto a new field\n"
-    "width 800; height 600";
+    "width 800; height 600\n";
 
   sparse_error_t result;
   sparse_state_t state;
   sparse_options_t options = SP_CONSUME_WHITESPACE | SP_TRIM_TRAILING_SPACES | SP_NAMELESS_ROOT_NODES;
 
-  check_sparse_result(sparse_begin(&state, 0, options, sparse_handle));
+  check_sparse_result(sparse_begin(&state, 0, options, sparse_handle, NULL));
   check_sparse_result(sparse_run(&state, test_string, test_string + 10));
   check_sparse_result(sparse_run(&state, test_string + 10, NULL));
   check_sparse_result(sparse_end(&state));

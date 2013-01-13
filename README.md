@@ -92,7 +92,16 @@ they're incorrect. In other words, it's a _very_ dumb format.
     sparse_begin(sparse_state_t *state,
                  size_t initial_buffer_capacity,
                  sparse_options_t options,
-                 sparse_fn_t callback);
+                 sparse_fn_t callback,
+                 void *context);
+
+    #ifdef __BLOCKS__
+    sparse_error_t
+    sparse_begin_using_block(sparse_state_t *state,
+                             size_t initial_buffer_capacity,
+                             sparse_options_t options,
+                             sparse_block_t block);
+    #endif
 
 Initializes a Sparse `state` object with the given parameters.
 
@@ -104,13 +113,14 @@ be sufficient for most purposes.
 below.
 
 `callback` is the Sparse callback function, defined as:  
-`typedef void (*sparse_fn_t)(sparse_msg_t msg, const char *begin, const char *end)`  
+`typedef void (*sparse_fn_t)(sparse_msg_t msg, const char *begin, const char *end, void *context)`  
 It takes a message and the begin- and end-point of a string. The strings may be
 empty. You should never retain a pointer to the strings passed to this callback.
 The strings are not guruanteed to be null-terminated and you should assume they
 aren't. In certain cases, they may contain null characters as well -- they are
 not the string's terminator, so just treat them like any other character in the
-string.
+string. The opaque `context` provided is passed to the callback function each
+call.
 
 You may optionally pass a NULL callback. There's not much reason for doing so,
 but it's entirely possible and - if nothing else - it will sort of validate
@@ -119,6 +129,13 @@ Sparse document because most of it will be accidentally correct anyway. There
 are only a few ways to make the parser spit out an error, and they're just to
 prevent really odd cases (like nameless child nodes or incomplete documents or
 nameless root nodes by default [this one is optional]).
+
+If you're using Clang and have blocks enabled (-fblocks), you can also use the
+`sparse_begin_using_block` function to create a state with a block instead of a
+function callback. The block takes the same arguments as a function callback, so
+there's little difference there except that it's mildly more convenient and
+doesn't take an opaque context (it's assumed your block will capture any context
+it needs).
 
 
 ### Options
