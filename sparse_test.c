@@ -77,7 +77,6 @@ int main(int argc, char const *argv[])
     "# Semicolons can terminate a value and tell the parser to go onto a new field\n"
     "width 800; height 600\n";
 
-  sparse_error_t result;
   sparse_state_t state;
   sparse_options_t options = SP_CONSUME_WHITESPACE | SP_TRIM_TRAILING_SPACES | SP_NAMELESS_ROOT_NODES;
 
