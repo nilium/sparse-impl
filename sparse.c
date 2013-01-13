@@ -5,6 +5,10 @@
 #include <block.h>
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 static const char *sp_empty_str = "";
 static const char *sp_errstr_no_mem = "Could not allocate memory for sparse buffer.";
 static const char *sp_errstr_incomplete_doc = "Document is incomplete.";
@@ -354,3 +358,7 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
 #undef SP_CHECK_FLAG
 #undef SP_ENSURE_BUFFER_SIZED
 #undef SP_RETURN_ERROR
+
+#ifdef __cplusplus
+} // extern "C"
+#endif

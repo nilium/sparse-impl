@@ -5,6 +5,10 @@
 
 #define SP_DEFAULT_BUFFER_CAPACITY (128)
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum {
   SP_FIND_NAME,
   SP_READ_NAME,
@@ -72,5 +76,9 @@ sparse_error_t sparse_begin_using_block(sparse_state_t *state, size_t initial_bu
 #endif
 sparse_error_t sparse_end(sparse_state_t *state);
 sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, const char *src_end);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* end __CMT_SPARSE_H__ include guard */
