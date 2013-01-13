@@ -37,12 +37,14 @@ static const char *sp_errstr_incomplete_doc = "Document is incomplete.";
      (BUFFER = realloc(BUFFER, CURRENT))                \
    : BUFFER)
 #define SP_RETURN_ERROR(ERRNAME, START, END) {          \
+    const char *sp_err_begin = (START);                 \
+    const char *sp_err_end = (END);                     \
     if (SP_HAS_CALLBACK()) {                            \
-      const char *sp_err_begin = (START);               \
-      const char *sp_err_end = (END);                   \
       SP_SEND_MSG(SP_ERROR, sp_err_begin, sp_err_end);  \
     }                                                   \
     error = (ERRNAME);                                  \
+    state->error_begin = sp_err_begin;                  \
+    state->error_end = sp_err_end;                      \
     goto sparse_exit;                                   \
   }
 #define SP_ERRSTR_END(NAME) (NAME) + strlen((NAME))
@@ -64,8 +66,11 @@ sparse_error_t sparse_begin(sparse_state_t *state, size_t initial_buffer_capacit
 
   buffer = calloc(initial_buffer_capacity, sizeof(*buffer));
 
-  if (buffer == NULL)
+  if (buffer == NULL) {
+    state->error_begin = sp_errstr_no_mem;
+    state->error_end = SP_ERRSTR_END(sp_errstr_no_mem);
     return SP_ERROR_NO_MEM;
+  }
 
   state->buffer = buffer;
   state->buffer_capacity = initial_buffer_capacity;
@@ -112,6 +117,8 @@ sparse_error_t sparse_end(sparse_state_t *state)
   if (state->depth != 0) {
     error = SP_ERROR_INCOMPLETE_DOCUMENT;
     SP_SEND_MSG(SP_ERROR, sp_errstr_incomplete_doc, SP_ERRSTR_END(sp_errstr_incomplete_doc));
+    state->error_begin = sp_errstr_incomplete_doc;
+    state->error_end = SP_ERRSTR_END(sp_errstr_incomplete_doc);
   }
 
 #ifdef __BLOCKS__
@@ -122,7 +129,8 @@ sparse_error_t sparse_end(sparse_state_t *state)
   if (state->buffer != NULL)
     free(state->buffer);
 
-  memset(state, 0, sizeof(*state));
+  if (error != SP_NO_ERROR)
+    memset(state, 0, sizeof(*state));
 
   return error;
 }

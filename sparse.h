@@ -43,6 +43,8 @@ typedef void (*sparse_fn_t)(sparse_msg_t msg, const char *begin, const char *end
 
 typedef struct s_sparse_state {
   char *buffer;
+  const char *error_begin;
+  const char *error_end;
 
   size_t buffer_capacity;
   size_t buffer_size;
