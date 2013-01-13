@@ -1,10 +1,31 @@
 #include "sparse.h"
 #include <stdlib.h>
 #include <string.h>
+#ifdef __BLOCKS__
+#include <block.h>
+#endif
 
 static const char *sp_empty_str = "";
 static const char *sp_errstr_no_mem = "Could not allocate memory for sparse buffer.";
 static const char *sp_errstr_incomplete_doc = "Document is incomplete.";
+
+#ifdef __BLOCKS__
+#define SP_HAS_CALLBACK() (callback != NULL || block != NULL)
+#define SP_SEND_MSG(MSG, BEGIN, END) {           \
+    if (block != NULL) {                                \
+      block((MSG), (BEGIN), (END));                     \
+    } else if (callback != NULL) {                      \
+      callback((MSG), (BEGIN), (END));                  \
+    }                                                   \
+  }
+#else
+#define SP_HAS_CALLBACK() (callback != NULL)
+#define SP_SEND_MSG(MSG, BEGIN, END)  {                 \
+    if (callback != NULL) {                             \
+      callback((MSG), (BEGIN), (END));                  \
+    }                                                   \
+  }
+#endif
 
 #define SP_CHECK_FLAG(FLAGS, FLAG) (((FLAGS)&(FLAG)) == (FLAG))
 #define SP_ENSURE_BUFFER_SIZED(BUFFER, CURRENT, NEEDED) \
@@ -15,8 +36,12 @@ static const char *sp_errstr_incomplete_doc = "Document is incomplete.";
       : 0)),                                            \
      (BUFFER = realloc(BUFFER, CURRENT))                \
    : BUFFER)
-#define SP_RETURN_ERROR(ERRNAME, START, END, CB) {      \
-    if ((CB) != NULL) (CB)(SP_ERROR, (START), (END));   \
+#define SP_RETURN_ERROR(ERRNAME, START, END) {          \
+    if (SP_HAS_CALLBACK()) {                            \
+      const char *sp_err_begin = (START);               \
+      const char *sp_err_end = (END);                   \
+      SP_SEND_MSG(SP_ERROR, sp_err_begin, sp_err_end);  \
+    }                                                   \
     error = (ERRNAME);                                  \
     goto sparse_exit;                                   \
   }
@@ -33,23 +58,29 @@ sparse_error_t sparse_begin(sparse_state_t *state, size_t initial_buffer_capacit
   state->last_mode = SP_FIND_NAME;
   state->callback = callback;
 
-  if (callback != NULL) {
-    if (initial_buffer_capacity == 0)
-      initial_buffer_capacity = SP_DEFAULT_BUFFER_CAPACITY;
+  if (initial_buffer_capacity == 0)
+    initial_buffer_capacity = SP_DEFAULT_BUFFER_CAPACITY;
 
-    buffer = calloc(initial_buffer_capacity, sizeof(*buffer));
+  buffer = calloc(initial_buffer_capacity, sizeof(*buffer));
 
-    if (buffer == NULL)
-      return SP_ERROR_NO_MEM;
-  } else {
-    initial_buffer_capacity = 0;
-  }
+  if (buffer == NULL)
+    return SP_ERROR_NO_MEM;
 
   state->buffer = buffer;
   state->buffer_capacity = initial_buffer_capacity;
 
   return SP_NO_ERROR;
 }
+
+#ifdef __BLOCKS__
+sparse_error_t sparse_begin_using_block(sparse_state_t *state, size_t initial_buffer_capacity, sparse_options_t options, sparse_block_t block)
+{
+  const sparse_error_t error = sparse_begin(state, initial_buffer_capacity, options, NULL);
+  if (error == SP_NO_ERROR)
+    state->block = Block_copy(block);
+  return error;
+}
+#endif
 
 sparse_error_t sparse_end(sparse_state_t *state)
 {
@@ -69,6 +100,11 @@ sparse_error_t sparse_end(sparse_state_t *state)
     if (state->callback)
       state->callback(SP_ERROR, sp_errstr_incomplete_doc, SP_ERRSTR_END(sp_errstr_incomplete_doc));
   }
+
+#ifdef __BLOCKS__
+  if (state->block != NULL)
+    Block_release(state->block);
+#endif
 
   if (state->buffer != NULL)
     free(state->buffer);
@@ -101,7 +137,10 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
   sparse_mode_t mode = state->mode;
   sparse_mode_t last_mode = state->last_mode;
 
-  sparse_fn_t cb = state->callback;
+  sparse_fn_t callback = state->callback;
+#if __BLOCKS__
+  sparse_block_t block = state->block;
+#endif
 
   size_t depth = state->depth;
 
@@ -140,8 +179,8 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
       } else if (mode == SP_READ_NAME) {
         mode = SP_FIND_VALUE;
 
-        if (cb != NULL) {
-          cb(SP_NAME, buffer, buffer + buffer_size - num_spaces_trailing);
+        if (SP_HAS_CALLBACK()) {
+          SP_SEND_MSG(SP_NAME, buffer, buffer + buffer_size - num_spaces_trailing);
           buffer_size = 0;
         }
         continue;
@@ -152,23 +191,23 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
       if (mode == SP_READ_VALUE) {
         mode = SP_FIND_NAME;
 
-        if (cb != NULL) {
-          cb(SP_VALUE, buffer, buffer + buffer_size - num_spaces_trailing);
+        if (SP_HAS_CALLBACK()) {
+          SP_SEND_MSG(SP_VALUE, buffer, buffer + buffer_size - num_spaces_trailing);
           buffer_size = 0;
         }
       } else if (mode == SP_READ_NAME) {
         mode = SP_FIND_NAME;
 
-        if (cb != NULL) {
-          cb(SP_NAME, buffer, buffer + buffer_size - num_spaces_trailing);
+        if (SP_HAS_CALLBACK()) {
+          SP_SEND_MSG(SP_NAME, buffer, buffer + buffer_size - num_spaces_trailing);
           buffer_size = 0;
-          cb(SP_VALUE, sp_empty_str, sp_empty_str);
+          SP_SEND_MSG(SP_VALUE, sp_empty_str, sp_empty_str);
         }
       } else if (mode == SP_FIND_VALUE) {
         mode = SP_FIND_NAME;
 
-        if (cb != NULL)
-          cb(SP_VALUE, sp_empty_str, sp_empty_str);
+        if (SP_HAS_CALLBACK())
+          SP_SEND_MSG(SP_VALUE, sp_empty_str, sp_empty_str);
       }
 
       last_mode = mode;
@@ -179,16 +218,16 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
       if (mode == SP_READ_NAME) {
         mode = SP_FIND_NAME;
 
-        if (cb != NULL) {
-          cb(SP_NAME, buffer, buffer + buffer_size - num_spaces_trailing);
+        if (SP_HAS_CALLBACK()) {
+          SP_SEND_MSG(SP_NAME, buffer, buffer + buffer_size - num_spaces_trailing);
           buffer_size = 0;
-          cb(SP_VALUE, sp_empty_str, sp_empty_str);
+          SP_SEND_MSG(SP_VALUE, sp_empty_str, sp_empty_str);
         }
       } else if (mode == SP_READ_VALUE) {
         mode = SP_FIND_NAME;
 
-        if (cb != NULL) {
-          cb(SP_VALUE, buffer, buffer + buffer_size - num_spaces_trailing);
+        if (SP_HAS_CALLBACK()) {
+          SP_SEND_MSG(SP_VALUE, buffer, buffer + buffer_size - num_spaces_trailing);
           buffer_size = 0;
         }
       }
@@ -199,60 +238,60 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
         ++depth;
         mode = SP_FIND_NAME;
 
-        if (cb != NULL)
-          cb(SP_BEGIN_NODE, src_iter, src_iter + 1);
+        if (SP_HAS_CALLBACK())
+          SP_SEND_MSG(SP_BEGIN_NODE, src_iter, src_iter + 1);
 
         continue;
       } else if (mode == SP_FIND_NAME && depth == 0 && nameless_roots) {
-        if (cb != NULL) {
+        if (SP_HAS_CALLBACK()) {
           ++depth;
-          cb(SP_NAME, sp_empty_str, sp_empty_str);
-          cb(SP_BEGIN_NODE, src_iter, src_iter + 1);
+          SP_SEND_MSG(SP_NAME, sp_empty_str, sp_empty_str);
+          SP_SEND_MSG(SP_BEGIN_NODE, src_iter, src_iter + 1);
         }
 
         continue;
       }
 
-      SP_RETURN_ERROR(SP_ERROR_INVALID_CHAR, src_iter, src_iter + 1, cb);
+      SP_RETURN_ERROR(SP_ERROR_INVALID_CHAR, src_iter, src_iter + 1);
       break;
 
     case '}':
       if (mode == SP_READ_VALUE) {
-        if (cb != NULL) {
-          cb(SP_VALUE, buffer, buffer + buffer_size - num_spaces_trailing);
+        if (SP_HAS_CALLBACK()) {
+          SP_SEND_MSG(SP_VALUE, buffer, buffer + buffer_size - num_spaces_trailing);
           buffer_size = 0;
         }
       } else if (mode != SP_FIND_NAME) {
-        SP_RETURN_ERROR(SP_ERROR_INVALID_CHAR, src_iter, src_iter + 1, cb);
+        SP_RETURN_ERROR(SP_ERROR_INVALID_CHAR, src_iter, src_iter + 1);
       }
 
       if (depth == 0)
-        SP_RETURN_ERROR(SP_ERROR_INVALID_CHAR, src_iter, src_iter + 1, cb);
+        SP_RETURN_ERROR(SP_ERROR_INVALID_CHAR, src_iter, src_iter + 1);
 
       --depth;
       mode = SP_FIND_NAME;
 
-      if (cb != NULL)
-        cb(SP_END_NODE, src_iter, src_iter + 1);
+      if (SP_HAS_CALLBACK())
+        SP_SEND_MSG(SP_END_NODE, src_iter, src_iter + 1);
 
       break;
 
     case ';':
       switch (mode) {
       case SP_READ_VALUE:
-        if (cb != NULL)
-          cb(SP_VALUE, buffer, buffer + buffer_size - num_spaces_trailing);
+        if (SP_HAS_CALLBACK())
+          SP_SEND_MSG(SP_VALUE, buffer, buffer + buffer_size - num_spaces_trailing);
         goto sparse_semicolon_reset;
 
       case SP_FIND_VALUE:
-        if (cb != NULL)
-          cb(SP_VALUE, sp_empty_str, sp_empty_str);
+        if (SP_HAS_CALLBACK())
+          SP_SEND_MSG(SP_VALUE, sp_empty_str, sp_empty_str);
         goto sparse_semicolon_reset;
 
       case SP_READ_NAME:
-        if (cb != NULL) {
-          cb(SP_NAME, buffer, buffer + buffer_size - num_spaces_trailing);
-          cb(SP_VALUE, sp_empty_str, sp_empty_str);
+        if (SP_HAS_CALLBACK()) {
+          SP_SEND_MSG(SP_NAME, buffer, buffer + buffer_size - num_spaces_trailing);
+          SP_SEND_MSG(SP_VALUE, sp_empty_str, sp_empty_str);
           sparse_semicolon_reset:
           buffer_size = 0;
         }
@@ -285,13 +324,13 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
       else if (mode == SP_FIND_VALUE)
         mode = SP_READ_VALUE;
 
-      if (cb == NULL)
+      if (!SP_HAS_CALLBACK())
         break;
 
       buffer = SP_ENSURE_BUFFER_SIZED(buffer, buffer_capacity, buffer_size + 1);
 
       if (buffer == NULL)
-        SP_RETURN_ERROR(SP_ERROR_NO_MEM, sp_errstr_no_mem, SP_ERRSTR_END(sp_errstr_no_mem), cb);
+        SP_RETURN_ERROR(SP_ERROR_NO_MEM, sp_errstr_no_mem, SP_ERRSTR_END(sp_errstr_no_mem));
 
       buffer[buffer_size++] = (char)current_char;
       break;
