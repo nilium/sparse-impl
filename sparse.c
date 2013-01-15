@@ -41,14 +41,12 @@ static const char *sp_errstr_incomplete_doc = "Document is incomplete.";
      (BUFFER = realloc(BUFFER, CURRENT))                \
    : BUFFER)
 #define SP_RETURN_ERROR(ERRNAME, START, END) {          \
-    const char *sp_err_begin = (START);                 \
-    const char *sp_err_end = (END);                     \
+    state->error_begin = (START);                       \
+    state->error_end = (END);                           \
     if (SP_HAS_CALLBACK()) {                            \
-      SP_SEND_MSG(SP_ERROR, sp_err_begin, sp_err_end);  \
+      SP_SEND_MSG(SP_ERROR, state->error_begin, state->error_end); \
     }                                                   \
     error = (ERRNAME);                                  \
-    state->error_begin = sp_err_begin;                  \
-    state->error_end = sp_err_end;                      \
     goto sparse_exit;                                   \
   }
 #define SP_ERRSTR_END(NAME) (NAME) + strlen((NAME))
