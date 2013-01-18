@@ -59,7 +59,6 @@ sparse_error_t sparse_begin(sparse_state_t *state, size_t initial_buffer_capacit
 
   state->options = options;
   state->mode = SP_FIND_NAME;
-  state->last_mode = SP_FIND_NAME;
   state->callback = callback;
   state->context = context;
 
@@ -156,7 +155,6 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
   int in_escape = state->in_escape;
 
   sparse_mode_t mode = state->mode;
-  sparse_mode_t last_mode = state->last_mode;
 
   sparse_fn_t callback = state->callback;
   void *context = state->context;
@@ -176,7 +174,7 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
 
     if (mode == SP_READ_COMMENT) {
       if (current_char == '\n')
-        mode = last_mode;
+        mode = SP_FIND_NAME;
 
       continue;
     } else if (in_escape) {
@@ -225,7 +223,6 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
         SP_SEND_MSG(SP_VALUE, sp_empty_str, sp_empty_str);
       }
 
-      last_mode = mode;
       mode = SP_READ_COMMENT;
       break;
 
@@ -346,7 +343,6 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
   state->num_spaces_trailing = num_spaces_trailing;
   state->depth = depth;
   state->mode = mode;
-  state->last_mode = last_mode;
   state->in_escape = in_escape;
   state->last_char = last_char;
 
