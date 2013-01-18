@@ -152,8 +152,10 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
   size_t num_spaces_trailing = state->num_spaces_trailing;
   char *buffer = state->buffer;
 
-  int current_char = 0;
-  int last_char = state->last_char;
+  int current_char = state->last_char;
+  // the loop head will move current_char into last_char, hence why current_char
+  // gets the last_char state first.
+  int last_char = 0;
   int in_escape = state->in_escape;
 
   sparse_mode_t mode = state->mode;
