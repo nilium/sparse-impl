@@ -209,59 +209,34 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
       }
       goto sparse_buffer_char_trim_spaces;
 
-    case '#':
-      if (mode == SP_READ_VALUE) {
-        mode = SP_FIND_NAME;
-
-        SP_SEND_MSG(SP_VALUE, buffer, buffer + buffer_size - num_spaces_trailing);
-        buffer_size = 0;
-      } else if (mode == SP_READ_NAME) {
-        mode = SP_FIND_NAME;
-
-        SP_SEND_MSG(SP_NAME, buffer, buffer + buffer_size - num_spaces_trailing);
-        SP_SEND_MSG(SP_VALUE, sp_empty_str, sp_empty_str);
-        buffer_size = 0;
-      } else if (mode == SP_FIND_VALUE) {
-        mode = SP_FIND_NAME;
-
-        SP_SEND_MSG(SP_VALUE, sp_empty_str, sp_empty_str);
-      }
-
-      mode = SP_READ_COMMENT;
-      break;
-
-    case '\n':
-      if (mode == SP_READ_NAME) {
-        mode = SP_FIND_NAME;
-
-        SP_SEND_MSG(SP_NAME, buffer, buffer + buffer_size - num_spaces_trailing);
-        SP_SEND_MSG(SP_VALUE, sp_empty_str, sp_empty_str);
-        buffer_size = 0;
-      } else if (mode == SP_READ_VALUE) {
-        mode = SP_FIND_NAME;
-
-        SP_SEND_MSG(SP_VALUE, buffer, buffer + buffer_size - num_spaces_trailing);
-        buffer_size = 0;
-      }
-      break;
-
     case '{': // open node
-      if (mode == SP_FIND_VALUE) {
+      switch (mode) {
+      case SP_READ_NAME:
+        SP_SEND_MSG(SP_NAME, buffer, buffer + buffer_size - num_spaces_trailing);
+        buffer_size = 0;
+
+      case SP_FIND_VALUE:
         ++depth;
-        mode = SP_FIND_NAME;
-
         SP_SEND_MSG(SP_BEGIN_NODE, src_iter, src_iter + 1);
+        break;
 
-        continue;
-      } else if (mode == SP_FIND_NAME && depth == 0 && nameless_roots) {
-        ++depth;
-        SP_SEND_MSG(SP_NAME, sp_empty_str, sp_empty_str);
-        SP_SEND_MSG(SP_BEGIN_NODE, src_iter, src_iter + 1);
+      case SP_READ_VALUE:
+        SP_SEND_MSG(SP_VALUE, buffer, buffer + buffer_size - num_spaces_trailing);
 
-        continue;
+      case SP_FIND_NAME:
+        if (depth == 0 && nameless_roots) {
+          ++depth;
+          SP_SEND_MSG(SP_NAME, sp_empty_str, sp_empty_str);
+          SP_SEND_MSG(SP_BEGIN_NODE, src_iter, src_iter + 1);
+          break;
+        }
+
+        default:
+        SP_RETURN_ERROR(SP_ERROR_INVALID_CHAR, src_iter, src_iter + 1);
+        break;
       }
 
-      SP_RETURN_ERROR(SP_ERROR_INVALID_CHAR, src_iter, src_iter + 1);
+      mode = SP_FIND_NAME;
       break;
 
     case '}':
@@ -279,31 +254,29 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
       mode = SP_FIND_NAME;
 
       SP_SEND_MSG(SP_END_NODE, src_iter, src_iter + 1);
-
       break;
 
+    case '#':
     case ';':
+    case '\n':
       switch (mode) {
-      case SP_READ_VALUE:
-        SP_SEND_MSG(SP_VALUE, buffer, buffer + buffer_size - num_spaces_trailing);
-        goto sparse_semicolon_reset;
+      case SP_READ_NAME:
+        SP_SEND_MSG(SP_NAME, buffer, buffer + buffer_size - num_spaces_trailing);
+        buffer_size = 0;
 
       case SP_FIND_VALUE:
         SP_SEND_MSG(SP_VALUE, sp_empty_str, sp_empty_str);
-        goto sparse_semicolon_reset;
-
-      case SP_READ_NAME:
-        SP_SEND_MSG(SP_NAME, buffer, buffer + buffer_size - num_spaces_trailing);
-        SP_SEND_MSG(SP_VALUE, sp_empty_str, sp_empty_str);
-
-        sparse_semicolon_reset:
-        buffer_size = 0;
-        mode = SP_FIND_NAME;
-
-      default:
-        // nop
         break;
+
+      case SP_READ_VALUE:
+        SP_SEND_MSG(SP_VALUE, buffer, buffer + buffer_size - num_spaces_trailing);
+        buffer_size = 0;
+        break;
+
+      default: break;
       }
+
+      mode = current_char == '#' ? SP_READ_COMMENT : SP_FIND_NAME;
       break;
 
     case '\\':  // escape
