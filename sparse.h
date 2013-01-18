@@ -12,7 +12,6 @@ extern "C" {
 typedef enum {
   SP_FIND_NAME,
   SP_READ_NAME,
-  SP_FIND_OPENING,
   SP_FIND_VALUE,
   SP_READ_VALUE,
   SP_READ_COMMENT
