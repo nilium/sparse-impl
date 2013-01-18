@@ -64,7 +64,7 @@ typedef struct s_sparse_state {
 
   sparse_fn_t callback;
 #ifdef __BLOCKS__
-  sparse_block_t block;
+  __unsafe_unretained sparse_block_t block;
 #endif
 } sparse_state_t;
 
