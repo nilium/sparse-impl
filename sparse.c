@@ -111,6 +111,8 @@ sparse_error_t sparse_end(sparse_state_t *state)
     SP_SEND_MSG(SP_VALUE, sp_empty_str, sp_empty_str);
   } else if (state->mode == SP_READ_VALUE) {
     SP_SEND_MSG(SP_VALUE, state->buffer, state->buffer + state->buffer_size - state->num_spaces_trailing);
+  } else if (state->mode == SP_FIND_VALUE) {
+    SP_SEND_MSG(SP_VALUE, sp_empty_str, sp_empty_str);
   }
 
   if (state->depth != 0) {
