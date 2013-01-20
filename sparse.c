@@ -189,6 +189,7 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
       case 'b': current_char = '\b'; break;
       case 'f': current_char = '\f'; break;
       case 't': current_char = '\t'; break;
+      case '0': current_char = '\0'; break;
       default: break;
       }
       in_escape = 0;

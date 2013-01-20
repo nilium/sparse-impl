@@ -153,10 +153,13 @@ public class SparseParser
     for (; chars_index < source_length; ++chars_index) {
       final char currentChar = chars[chars_index];
 
+      if (currentChar == '\n') {
+        ++line;
+        column = 0;
+      }
+
       if (mode == ParseMode.ReadComment) {
         if (currentChar == '\n') {
-          ++line;
-          column = 0;
           mode = ParseMode.FindName;
         }
       } else if (inEscape) {
@@ -167,6 +170,7 @@ public class SparseParser
         case 'b': bufferCharacter('\b', true);     break;
         case 'f': bufferCharacter('\f', true);     break;
         case 't': bufferCharacter('\t', true);     break;
+        case '0': bufferCharacter('\0', true);     break;
         default:  bufferCharacter(currentChar, true); break;
         }
         inEscape = false;
