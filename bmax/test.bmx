@@ -7,8 +7,9 @@ Function Handler(msg%, str$, ctx:Object)
 End Function
 
 Local options% = SP_TRIM_TRAILING_SPACES | SP_NAMELESS_ROOT_NODES
-Local parser:TSparseParser = New TSparseParser.Init(Handler, Null, options)
-Local source$ = LoadString("../../../ruby/test.sp")
+Local source$ = LoadString("../ruby/test.sp")
+Local parser:TSparseParser = New TSparseParser
 
+parser.Init Null, Null, options
 parser.Parse source
 parser.Finalize
