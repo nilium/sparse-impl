@@ -42,11 +42,6 @@ class Sparse::Parser
     raise "Attempt to continue parsing using finalized parser" if @finished
 
     source.each_char() { |char|
-      if char == "\n"
-        @line += 1
-        @column = 0
-      end
-
       if @mode == :read_comment
         if char == "\n"
           @mode = :find_name
@@ -142,7 +137,13 @@ class Sparse::Parser
       end
 
       @last_char = char
-      @column += 1
+
+      if char == "\n"
+        @line += 1
+        @column = 1
+      else
+        @column += 1
+      end
     }
   end
 

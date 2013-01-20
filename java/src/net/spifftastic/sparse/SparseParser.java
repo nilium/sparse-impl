@@ -153,11 +153,6 @@ public class SparseParser
     for (; chars_index < source_length; ++chars_index) {
       final char currentChar = chars[chars_index];
 
-      if (currentChar == '\n') {
-        ++line;
-        column = 0;
-      }
-
       if (mode == ParseMode.ReadComment) {
         if (currentChar == '\n') {
           mode = ParseMode.FindName;
@@ -259,7 +254,13 @@ public class SparseParser
       }
 
       lastChar = currentChar;
-      ++column;
+
+      if (currentChar == '\n') {
+        ++line;
+        column = 1;
+      } else {
+        ++column;
+      }
     }
 
     _inEscape = inEscape;

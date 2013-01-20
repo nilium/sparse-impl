@@ -76,10 +76,6 @@ class SparseParser(object):
             raise SparseException("Attempt to continue parsing using finalized parser")
 
         for char in source:
-            if char == '\n':
-                self._line += 1
-                self._column = 0
-
             if self._mode == SP_READ_COMMENT:
                 if char == "\n":
                     self._mode = SP_FIND_NAME
@@ -118,8 +114,13 @@ class SparseParser(object):
                     self._mode = SP_READ_VALUE
                 self._buffer(char)
 
-            self._column += 1
             self._last_char = char
+
+            if char == '\n':
+                self._line += 1
+                self._column = 1
+            else:
+                self._column += 1
 
     def finalize(self):
         if self._finished:
