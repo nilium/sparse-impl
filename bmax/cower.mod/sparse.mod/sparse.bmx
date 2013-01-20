@@ -231,6 +231,7 @@ Type TSparseParser
     If _callback
       _callback(SP_NODE_CLOSING, "}", _context)
     EndIf
+    _openings.RemoveLast()
   EndMethod
 
   Method _ParseWhitespace(char%)
