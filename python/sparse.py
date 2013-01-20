@@ -76,12 +76,31 @@ class SparseParser(object):
             raise SparseException("Attempt to continue parsing using finalized parser")
 
         for char in source:
+            if char == '\n':
+                self._line += 1
+                self._column = 0
+
             if self._mode == SP_READ_COMMENT:
-                if char == '\n':
-                    self._newline()
+                if char == "\n":
                     self._mode = SP_FIND_NAME
             elif self._in_escape:
-                pass
+                if char == 'n':
+                    char = '\n'
+                elif char == 'n':
+                    char = '\n'
+                elif char == 'r':
+                    char = '\r'
+                elif char == 'a':
+                    char = '\a'
+                elif char == 'b':
+                    char = '\b'
+                elif char == 'f':
+                    char = '\f'
+                elif char == 't':
+                    char = '\t'
+                elif char == '0':
+                    char = '\0'
+                self._buffer(char)
             elif char == ' ' or char == '\t':
                 self._parse_whitespace(char)
             elif char == '\n' or char == ';' or char == '#':
@@ -115,10 +134,6 @@ class SparseParser(object):
 
         self._finished = True
 
-    def _newline(self):
-        self._line += 1
-        self._column = 0
-
     def _parse_terminate_field(self, terminate_value):
         if self._mode == SP_READ_NAME:
             self.parsed_name(self.grab_reset_buffer())
@@ -146,9 +161,6 @@ class SparseParser(object):
             self._buffer(char)
 
     def _parse_terminal(self, char):
-        if char == "\n":
-            self._newline()
-
         self._parse_terminate_field(True)
 
         if char == "#":
