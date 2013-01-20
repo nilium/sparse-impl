@@ -125,10 +125,16 @@ Type TSparseParser
     _space_count = 0
     _last_char = SP_NULL
     _buffer_off = 0
-    _buffer = New Short[SP_DEFAULT_CAPACITY]
+    If _buffer = Null
+      _buffer = New Short[SP_DEFAULT_CAPACITY]
+    EndIf
     _context = context
     _callback = callback
-    _openings = New TList
+    If _openings = Null
+      _openings = New TList
+    Else
+      _openings.Clear()
+    EndIf
     Return Self
   EndMethod
 
