@@ -42,9 +42,13 @@ class Sparse::Parser
     raise "Attempt to continue parsing using finalized parser" if @finished
 
     source.each_char() { |char|
+      if char == "\n"
+        @line += 1
+        @column = 0
+      end
+
       if @mode == :read_comment
         if char == "\n"
-          newline()
           @mode = :find_name
         end
       elsif @in_escape == true
@@ -55,6 +59,7 @@ class Sparse::Parser
                when 'b' then "\b"
                when 'f' then "\f"
                when 't' then "\t"
+               when '0' then "\0"
                else char
                end, true)
         @in_escape = false
@@ -111,7 +116,6 @@ class Sparse::Parser
             parsedNodeClosing()
 
           when "\n", '#', ';'
-            newline() if char == "\n"
             case @mode
             when :read_name, :find_value
               parsedName(grab_and_reset_buffer()) if @mode == :read_name
@@ -185,11 +189,6 @@ class Sparse::Parser
   end
 
   protected
-
-  def newline()
-    @line += 1
-    @column = 0
-  end
 
   def error_string(message)
     "#{self.class.line_column_string @line, @column} #{message}"
