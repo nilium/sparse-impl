@@ -287,7 +287,7 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
     default:
       sparse_buffer_char_trim_spaces:
       if (trim_spaces) {
-        if (current_char == ' ') {
+        if (current_char == ' ' || current_char == '\t') {
           ++num_spaces_trailing;
         } else {
           sparse_buffer_char:
