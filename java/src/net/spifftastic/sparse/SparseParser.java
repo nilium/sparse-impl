@@ -225,8 +225,6 @@ public class SparseParser
           break;
 
         case '\n':
-          ++line;
-          column = 0;
         case '#':
         case ';':
           switch (mode) {
