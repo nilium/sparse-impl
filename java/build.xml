@@ -1,5 +1,5 @@
 <!-- Based off the handy dandy Apache Ant docs example -->
-<project name="Sparse" default="dist" basedir=".">
+<project name="Sparse" default="release" basedir=".">
   <property name="src" location="src"/>
   <property name="build" location="build"/>
   <property name="dist"  location="dist"/>
