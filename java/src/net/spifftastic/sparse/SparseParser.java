@@ -94,8 +94,6 @@ public class SparseParser
     _consumeWhitespace = checkFlag(options, CONSUME_WHITESPACE);
     _trimTrailingSpaces = checkFlag(options, TRIM_TRAILING_SPACES);
     _allowNamelessRoots = checkFlag(options, NAMELESS_ROOT_NODES);
-
-    System.out.println("Flags: " + _consumeWhitespace + " " + _trimTrailingSpaces + " " + _allowNamelessRoots);
   }
 
   public SparseParser(final ParseListener listener)
