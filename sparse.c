@@ -143,7 +143,8 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
   const sparse_options_t options = state->options;
   const int consume_whitespace = SP_CHECK_FLAG(options, SP_CONSUME_WHITESPACE);
   const int trim_spaces = SP_CHECK_FLAG(options, SP_TRIM_TRAILING_SPACES);
-  const int nameless_roots = SP_CHECK_FLAG(options, SP_NAMELESS_ROOT_NODES);
+  const int nameless_nodes = SP_CHECK_FLAG(options, SP_NAMELESS_NODES);
+  const int nameless_roots = nameless_nodes || SP_CHECK_FLAG(options, SP_NAMELESS_ROOT_NODES);
 
   const char *src_iter = src_begin;
 
@@ -225,7 +226,7 @@ sparse_error_t sparse_run(sparse_state_t *state, const char *const src_begin, co
         SP_SEND_MSG(SP_VALUE, buffer, buffer + buffer_size - num_spaces_trailing);
 
       case SP_FIND_NAME:
-        if (depth == 0 && nameless_roots) {
+        if (nameless_nodes || (depth == 0 && nameless_roots)) {
           ++depth;
           SP_SEND_MSG(SP_NAME, sp_empty_str, sp_empty_str);
           SP_SEND_MSG(SP_BEGIN_NODE, src_iter, src_iter + 1);

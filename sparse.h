@@ -36,6 +36,7 @@ typedef enum {
   SP_CONSUME_WHITESPACE =   0x1,  // Consumes whitespace so only one whitespace will ever show up in a value.
   SP_TRIM_TRAILING_SPACES = 0x2,  // Trim trailing whitespace from the end of values.
   SP_NAMELESS_ROOT_NODES =  0x4,  // Allow root nodes to be nameless (callback will be given NULL strings for a root node's name).
+  SP_NAMELESS_NODES =       0x8,  // Allow nameless nodes everywhere (not just root nodes - though this implies SP_NAMELESS_ROOT_NODES)
   SP_DEFAULT_OPTIONS = SP_TRIM_TRAILING_SPACES
 } sparse_options_t;
 
